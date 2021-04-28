@@ -10,19 +10,66 @@ app.use(cors());
 const users = [];
 
 function checksExistsUserAccount(request, response, next) {
-  // Complete aqui
+  const { username } = request.headers
+
+  const user = users.find(user => user.username === username)
+
+  if (!user) {
+    return response.status(404).json({error: 'Unauthorized.'})
+  }
+
+  request.user = user
+
+  next()
 }
 
 function checksCreateTodosUserAvailability(request, response, next) {
-  // Complete aqui
+  const { user } = request
+
+  if (!user.pro && user.todos.length === 10) {
+    return response.status(403).json({error: 'You reached your todo items free plan limit. Please consider upgrading to Pro.'})
+  }
+
+  next()
 }
 
 function checksTodoExists(request, response, next) {
-  // Complete aqui
+  const { id } = request.params
+  const { username } = request.headers
+
+  if (!validate(id)) {
+    return response.status(400).json({error: 'Invalid todo item id type.'})
+  }
+
+  const user = users.find(user => user.username === username)
+
+  if (!user) {
+    return response.status(404).json({error: 'Unauthorized.'})
+  }
+
+  const todo = user.todos.find(todo => todo.id === id)
+
+  if (!todo) {
+    return response.status(404).json({error: 'Todo item not found'})
+  }
+
+  request.user = user
+  request.todo = todo
+
+  next()
 }
 
 function findUserById(request, response, next) {
-  // Complete aqui
+  const { id } = request.params
+
+  const user = users.find(user => user.id === id)
+
+  if (!user) {
+    return response.status(404).json({error: 'User not found'})
+  }
+
+  request.user = user
+  next()
 }
 
 app.post('/users', (request, response) => {
@@ -106,7 +153,7 @@ app.patch('/todos/:id/done', checksTodoExists, (request, response) => {
   return response.json(todo);
 });
 
-app.delete('/todos/:id', checksExistsUserAccount, checksTodoExists, (request, response) => {
+app.delete('/todos/:id', checksTodoExists, (request, response) => {
   const { user, todo } = request;
 
   const todoIndex = user.todos.indexOf(todo);
